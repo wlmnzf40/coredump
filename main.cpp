@@ -100,11 +100,17 @@ public:
             for (node* n : param->nodes) {
                 pivot_attr_trees_.Add(n);
             }
+            break;
         }
 
-        // 清理临时数据
-        for (auto& param : _params) {
-            delete param;
+        // 清理临时数据（索引0的nodes已转移，其余未合并的需手动释放）
+        for (size_t i = 0; i < _params.size(); ++i) {
+            if (i > 0) {
+                for (node* n : _params[i]->nodes) {
+                    delete n;
+                }
+            }
+            delete _params[i];
         }
         _params.clear();
         _tids.clear();
