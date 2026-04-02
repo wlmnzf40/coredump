@@ -100,7 +100,6 @@ public:
             for (node* n : param->nodes) {
                 pivot_attr_trees_.Add(n);
             }
-            break;
         }
 
         // 清理临时数据
