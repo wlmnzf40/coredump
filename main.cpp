@@ -18,10 +18,13 @@ struct node {
 
 class NodeLists {
 public:
+    // 提前 reserve，防止 push_back 触发 realloc 导致 _M_start 改变
+    // _M_start 稳定后，acquire/release 对 physical_size 的同步才真正有效
+    explicit NodeLists(int cap = 1024) { nodes.reserve(cap); }
+
     void Add(node* n) {
         nodes.push_back(n);
-        std::atomic_thread_fence(std::memory_order_release);
-        physical_size.fetch_add(1, std::memory_order_release);  // 原子自增
+        physical_size.fetch_add(1, std::memory_order_release);  // release 已隐含 store-store 屏障
     }
 
     // 获取起始迭代器
@@ -30,13 +33,17 @@ public:
     }
 
     // 获取结束迭代器（基于物理大小）
+    // 先 acquire load size，保证后续读 nodes 内容时已与写端同步
     auto cEnd() const {
-        return cBegin() + physical_size.load(std::memory_order_acquire);
+        int sz = physical_size.load(std::memory_order_acquire);
+        return nodes.cbegin() + sz;
     }
 
     // 遍历函数示例
+    // 先通过 cEnd() 完成 acquire，再用 cBegin() 遍历，保证顺序
     void Traverse() {
-        for (auto it = cBegin(); it != cEnd(); ++it) {
+        auto end = cEnd();
+        for (auto it = cBegin(); it != end; ++it) {
             assert((*it)->weight != 555);
         }
     }
